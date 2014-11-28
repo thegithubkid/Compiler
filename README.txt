@@ -1,4 +1,4 @@
-1.Isaac Valdez
+1.
 2.no assistance
 3.took about 8 hrs
 4.I used stringTokenizer code from http://ostermiller.org/.
