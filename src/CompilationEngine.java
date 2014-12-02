@@ -68,6 +68,7 @@ public class CompilationEngine {
 	private BufferedWriter writer;
 	private String token;
 	
+	
 	public CompilationEngine(String inDir) throws IOException
 	{
 		keywords = new ArrayList<String>();
@@ -415,6 +416,7 @@ public class CompilationEngine {
 		writer.write(classClose);
 		
 	}
+
 	private void compileClassSubroutineDec() throws IOException {
 		//write opening subroutine tag
 		writer.write(subroutineDecOpen);
@@ -540,8 +542,6 @@ public class CompilationEngine {
 		writer.write(subroutineBodyClose);
 	}
 
-
-
 	private void compileStatement() throws IOException {
 		
 		//checks what kind of statement and calls the appropriate statement
@@ -565,8 +565,6 @@ public class CompilationEngine {
 		}
 		
 	}
-
-
 
 	private void compileReturn() throws IOException {
 		//write <returnStatement>
@@ -608,8 +606,6 @@ public class CompilationEngine {
 		writer.write(returnStatementClose);
 	}
 
-
-
 	private void compileDo() throws IOException {
 		
 		//write <doStatement>
@@ -646,8 +642,6 @@ public class CompilationEngine {
 		//write </doStatement>
 		writer.write(doStatementClose);
 	}
-
-
 
 	private void compileSubroutineCall() throws IOException {
 		
@@ -707,8 +701,6 @@ public class CompilationEngine {
 		
 	}
 
-
-
 	private void compileExpressionList() throws IOException {
 		
 		//write opening expressionlist tag
@@ -740,8 +732,6 @@ public class CompilationEngine {
 		writer.write(expressionListClose);
 		
 	}
-
-
 
 	private void compileWhile() throws IOException {
 		writer.write(whileStatementOpen);
@@ -799,8 +789,6 @@ public class CompilationEngine {
 		writer.write(whileStatementClose);
 	}
 
-
-
 	private void compileStatements() throws IOException {
 		writer.write(statementsOpen);
 		while(token.equals("let") || token.equals("do") || token.equals("if")
@@ -810,8 +798,6 @@ public class CompilationEngine {
 		}
 		writer.write(statementsClose);
 	}
-
-
 
 	private void compileIf() throws IOException {
 		writer.write(ifStatementOpen);
@@ -888,8 +874,6 @@ public class CompilationEngine {
 		writer.write(ifStatementClose);
 	}
 
-
-
 	private void compileLet() throws IOException {
 		writer.write(letStatementOpen);
 		if(!token.equals("let"))
@@ -942,8 +926,6 @@ public class CompilationEngine {
 		writer.write(letStatementClose);
 	}
 
-
-
 	private void compileExpression() throws IOException {
 		writer.write(expressionOpen);
 		if(unaryOps.contains(token))
@@ -961,8 +943,6 @@ public class CompilationEngine {
 		}
 		writer.write(expressionClose);
 	}
-
-
 
 	private void compileTerm() throws IOException {
 		
@@ -1119,8 +1099,6 @@ public class CompilationEngine {
 		writer.write(termClose);
 	}
 
-
-
 	private void compileVarDec() throws IOException {
 		writer.write(varDecOpen);
 		if(!token.equals("var"))
@@ -1159,8 +1137,6 @@ public class CompilationEngine {
 		advance();
 		writer.write(varDecClose);
 	}
-
-
 
 	private void compileParameterList() throws IOException {
 		writer.write(parameterListOpen);
@@ -1203,15 +1179,11 @@ public class CompilationEngine {
 		
 	}
 
-
-
 	private void compileSubroutineName() throws IOException {
 		writeIdentifier(token);
 		advance();
 		
 	}
-
-
 
 	private void compileClassVarDec() throws IOException {
 		writer.write(classVarDecOpen);
@@ -1249,14 +1221,10 @@ public class CompilationEngine {
 		writer.write(classVarDecClose);
 	}
 
-
-
 	private void compileClassName() throws IOException {
 		//write class name
 		writeIdentifier(token);
-        advance();
-		
-		
+        advance();		
 	}
 
 	private void writeIdentifier(String token) throws IOException
@@ -1265,12 +1233,14 @@ public class CompilationEngine {
 		writer.write(token);
 		writer.write(identifierClose);
 	}
+
 	private void writeKeyword(String token) throws IOException
 	{
 		writer.write(keywordOpen);
 		writer.write(token);
 		writer.write(keywordClose);
 	}
+
 	private void writeSymbol(String token) throws IOException
 	{
 		if(token.equals("<"))
@@ -1299,9 +1269,11 @@ public class CompilationEngine {
 	    }
 	    return true;
 	}
+	
 	public static void main(String[] args) throws IOException
 	{
-		CompilationEngine comp = new CompilationEngine("C:\\Users\\Isaac\\Desktop\\Desktop\\School\\Mines\\Fall2014\\ComputingElements\\CSCI410\\Compiler");
+		//Change Path
+		CompilationEngine comp = new CompilationEngine("C:\\Users\\vigon_000\\Documents\\csci410\\Compiler");
 		
 	}
 }
