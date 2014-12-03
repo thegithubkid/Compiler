@@ -46,27 +46,27 @@ public class VMWriter{
 	
 	//Writes a VM label command
 	public void writeLabel(String label) throws IOException{
-		
+		outputFile.write("label "+label+"\n");
 	}
 	
 	//Writes a VM goto command
 	public void writeGoto(String label) throws IOException{
-		
+		outputFile.write("goto "+label+"\n");
 	}
 	
 	//Writes a VM if-goto command
 	public void writeIf(String label) throws IOException{
-		
+		outputFile.write("if-goto "+label+"\n");
 	}
 	
 	//Writes a VM call command
-	public void writeCall(String label) throws IOException{
-		
+	public void writeCall(String label, int nArgs) throws IOException{
+		outputFile.write("function "+label+" "+nArgs+"\n");
 	}
 	
 	//Writes a VM function command
-	public void writeFunction(String label) throws IOException{
-		
+	public void writeFunction(String label, int nLocals) throws IOException{
+		outputFile.write("function "+label+" "+nLocals+"\n");
 	}
 	
 	//Writes a VM return command
