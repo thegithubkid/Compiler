@@ -66,7 +66,13 @@ public class CompilationEngine {
 	private ArrayList<String> keywordConstants;
 	private BufferedReader reader;
 	private BufferedWriter writer;
+	private VMWriter vmWriter;
+	private SymbolTable table;
+	private String className;
 	private String token;
+	private int whileCount;
+	private int ifCount;
+	private boolean hasReturn;
 	
 	
 	public CompilationEngine(String inDir) throws IOException
@@ -76,6 +82,9 @@ public class CompilationEngine {
 		unaryOps = new ArrayList<String>();
 		ops = new ArrayList<String>();
 		keywordConstants = new ArrayList<String>();
+		hasReturn = false;
+		
+		
 		
 		//Add all keywords
 		keywords.add("class");
@@ -176,16 +185,17 @@ public class CompilationEngine {
 		{
 			//get jack file and create xml file
 			File jackFile = files[i];
-			File xmlFile = new File(dir,files[i].getName().replaceAll(".jack", ".xml"));
+			File VMFile = new File(dir,files[i].getName().replaceAll(".jack", ".vm"));
+			File XMLFile = new File(dir,files[i].getName().replaceAll(".jack", ".xml"));
 			FileInputStream inStream= new FileInputStream(jackFile);
-			xmlFile.createNewFile();
+			VMFile.createNewFile();
 			
 			//create readers and writers
 			reader = new BufferedReader(new InputStreamReader(inStream));
-			writer = new BufferedWriter(new FileWriter(xmlFile.getAbsoluteFile()));
+			writer = new BufferedWriter(new FileWriter(XMLFile.getAbsoluteFile()));
+			vmWriter = new VMWriter(VMFile);
 			//remove all comments and unneeded space in jack file
 			removeComments(jackFile);
-			
 			//turn the file into a string
 			jackString = fileToString(jackFile.getName().replace(".jack", ".tmp"));
 			//tokenize file string
@@ -198,7 +208,7 @@ public class CompilationEngine {
 				e.printStackTrace();
 			}
 			reader.close();
-			writer.close();
+			vmWriter.close();
 		}
 	}
 
@@ -418,30 +428,22 @@ public class CompilationEngine {
 	}
 
 	private void compileClassSubroutineDec() throws IOException {
-		//write opening subroutine tag
-		writer.write(subroutineDecOpen);
+		
+		String name = ""; 
+		String kind = "";
+		String type ="";
+		table.startSubroutine();
 		//write the constructor/method/function tag
 		//then get next token
-		writeKeyword(token);
+		kind = token;
 		advance();
+		type = token;
 		
-		//the next token should be the return type
-		//if the return type is a keyword (int, string, etc)
-		//write keyword tag
-		//else the return type is an identifier
-		if(keywords.contains(token))
-		{
-			writeKeyword(token);
-		}
-		else
-		{
-			writeIdentifier(token);
-		}
 		//get next token
 		advance();
 		//compile the name of the subroutine
-		compileSubroutineName();
-		
+		name = token;
+		advance();
 		//the next token after compiling the subroutine name
 		//should be an opening parenthesis
 		if(!token.equals("("))
@@ -453,7 +455,17 @@ public class CompilationEngine {
 		}
 		//write the symboltag for the parenthesis
 		//and get next token
-		writeSymbol(token);
+		if(kind.equals("method"))
+		{
+			table.define("this", className, KIND.ARG);
+		}
+		
+		String function = className + "." + name;
+			
+		
+		
+		
+		
 		advance();
 		//next token sould be the parameter list
 		compileParameterList();
@@ -481,7 +493,7 @@ public class CompilationEngine {
 	    
 		//compile the body
 		//this will handle consuming the opening and closing braces
-		compileSubroutineBody();
+		compileSubroutineBody(function,kind);
 		
 		/*if(!token.equals("}"))
 		{
@@ -496,9 +508,9 @@ public class CompilationEngine {
 
 
 
-	private void compileSubroutineBody() throws IOException {
+	private void compileSubroutineBody(String functionName, String kind) throws IOException {
 		//write subroutine body opening tag
-		writer.write(subroutineBodyOpen);
+		
 		
 		//the first token should be an opening curly brace
 		if(!token.equals("{"))
@@ -519,12 +531,35 @@ public class CompilationEngine {
 		{
 			compileVarDec();
 		}
-		
+		vmWriter.writeFunction(functionName, table.varCount(KIND.VAR));
+		if(kind.equals("method"))
+		{
+			vmWriter.writePush("argument", 0);
+			vmWriter.writePop("pointer", 0);
+		}
+		else if(kind.equals("constructor"))
+		{
+			if(table.varCount(KIND.FIELD) >0)
+			{
+				vmWriter.writePush("constant", table.varCount(KIND.FIELD));
+			}
+			vmWriter.writeCall("Memory.alloc", 1);
+			vmWriter.writePop("pointer", 0);
+		}
+		String lastStatementType = "";
 		//compile all statements
 		while(token.equals("let") || token.equals("if") || token.equals("while") ||
 				token.equals("do") || token.equals("return") )
 		{
+			lastStatementType = token;
 			compileStatements();
+			
+		}
+		System.out.println(lastStatementType);
+		if(!lastStatementType.equals("return"))
+		{
+			vmWriter.writePush("constant", 0);
+			vmWriter.writeReturn();
 		}
 		
 		//when all local vars and statements are finsished
@@ -535,11 +570,8 @@ public class CompilationEngine {
 			System.out.println(token);
 			System.exit(0);
 		}
-		//write closing bracket
-		//and closing subroutine body tag
-		writeSymbol(token);
+		
 		advance();
-		writer.write(subroutineBodyClose);
 	}
 
 	private void compileStatement() throws IOException {
@@ -584,7 +616,12 @@ public class CompilationEngine {
 		//if the next token is a semi-colon
 		//the return type is void
 		//if not then compile the return expression
-		if(!token.equals(";"))
+		if(token.equals(";"))
+		{
+			vmWriter.writePush("constant", 0);
+			
+		}
+		else
 		{
 			
 			compileExpression();
@@ -599,17 +636,12 @@ public class CompilationEngine {
 			System.exit(0);
 		}
 		
-		//write semi-colon
-		writeSymbol(token);
 		advance();
-		//write closing return statement tag
-		writer.write(returnStatementClose);
+		vmWriter.writeReturn();
 	}
 
 	private void compileDo() throws IOException {
 		
-		//write <doStatement>
-		writer.write(doStatementOpen);
 		
 		//the first token should be do
 		if(!token.equals("do"))
@@ -619,8 +651,6 @@ public class CompilationEngine {
 			System.exit(0);
 		}
 		
-		//write keyword tag for do
-		writeKeyword(token);
 		advance();
 		
 		//after do there should be a subroutine call
@@ -639,12 +669,11 @@ public class CompilationEngine {
 		writeSymbol(token);
 		advance();
 		
-		//write </doStatement>
-		writer.write(doStatementClose);
+		vmWriter.writePop("temp", 0);
 	}
 
 	private void compileSubroutineCall() throws IOException {
-		
+		String function = "";
 		//check subroutine call for dot operator
 		if(token.contains("."))
 		{
@@ -654,6 +683,18 @@ public class CompilationEngine {
 			String[] tokeSplit = token.split("\\.");
 			
 			//write each to xml
+			if(table.indexOf(tokeSplit[0]) > -1)
+			{
+				//case 2 className.subroutine
+				//if className not in symbol table
+				//		write className.subroutine
+				//else
+				//case 3 varname.subroutine
+				//get varname type
+				//replace varname with varname type (varnametype.subroutine)
+				//varname is first argument in expressionlist
+				
+			}
 			writeIdentifier(tokeSplit[0]);
 			writeSymbol(".");
 			writeIdentifier(tokeSplit[1]);
@@ -662,9 +703,13 @@ public class CompilationEngine {
 		}
 		else
 		{
-			//if no dot operator
-			writeIdentifier(token);
+			//case 1 subroutine(expressionlist)
+			//push pointer 0
+			//arglist+1
+			//write function className.funcName arglist
+		    function = className+"." +token;
 			advance();
+			vmWriter.writePush("pointer", 0);
 		}
 		
 		//after identifiers have been compiled
@@ -875,21 +920,21 @@ public class CompilationEngine {
 	}
 
 	private void compileLet() throws IOException {
-		writer.write(letStatementOpen);
+		
 		if(!token.equals("let"))
 		{
 			System.out.println("let ERROR");
 			System.out.println(token);
 			System.exit(0);
 		}
-		writeKeyword(token);
-		advance();
-		writeIdentifier(token);
-		advance();
 		
+		advance();
+		String varName = token;
+		advance();
+		boolean isArray = false;
 		if(token.equals("["))
 		{
-			
+			isArray = true;
 			writeSymbol(token);
 			advance();
 			compileExpression();
@@ -1100,7 +1145,9 @@ public class CompilationEngine {
 	}
 
 	private void compileVarDec() throws IOException {
-		writer.write(varDecOpen);
+	
+		String name = "";
+		String type = "";
 		if(!token.equals("var"))
 		{
 			System.out.println("varDec ERROR");
@@ -1109,6 +1156,7 @@ public class CompilationEngine {
 		}
 		writeKeyword(token);
 		advance();
+		type=token;
 		if(keywords.contains(token))
 		{
 			writeKeyword(token);
@@ -1117,15 +1165,19 @@ public class CompilationEngine {
 		{
 			writeIdentifier(token);
 		}
+		
 		advance();
-		writeIdentifier(token);
+		name = token;
 		advance();
+		table.define(name, type, KIND.VAR);
 		while(token.equals(","))
 		{
-			writeSymbol(token);
+			
 			advance();
-			writeIdentifier(token);
+			type = token;
 			advance();
+			name = token;
+			table.define(name, type, KIND.VAR);
 		}
 		if(!token.equals(";"))
 		{
@@ -1133,49 +1185,36 @@ public class CompilationEngine {
 			System.out.println(token);
 			System.exit(0);
 		}
-		writeSymbol(token);
 		advance();
-		writer.write(varDecClose);
 	}
 
 	private void compileParameterList() throws IOException {
-		writer.write(parameterListOpen);
+		
+		String name = "";
+		String type = "";
+		KIND kind = KIND.ARG;
 		if(token.equals(")"))
 		{
-			writer.write(parameterListClose);
 			return;
 		}
 		else
 		{
-			if(keywords.contains(token))
-			{
-				writeKeyword(token);
-			}
-			else
-			{
-				writeIdentifier(token);
-			}
+			type = token;
 			advance();
-			writeIdentifier(token);
+			name = token;
 			advance();
+			table.define(name, type, kind);
 			while(token.equals(","))
 			{
-				writeSymbol(token);
+				
 				advance();
-				if(keywords.contains(token))
-				{
-					writeKeyword(token);
-				}
-				else
-				{
-					writeIdentifier(token);
-				}
+				type = token;
 				advance();
-				writeIdentifier(token);
+				name = token;
 				advance();
+				table.define(name, type, kind);
 			}
 		}
-		writer.write(parameterListClose);
 		
 	}
 
@@ -1186,44 +1225,50 @@ public class CompilationEngine {
 	}
 
 	private void compileClassVarDec() throws IOException {
-		writer.write(classVarDecOpen);
+		
+		String varName = "";
+		String varType = "";
+		KIND varKind;
+		
 		if(!token.equals("field") || token.equals("static"))
 		{
 			System.out.println("ERROR");
 		}
-		writeKeyword(token);
+		switch(token)
+		{
+			case "field":
+				varKind = KIND.FIELD;
+				break;
+			case "static":
+				varKind = KIND.STATIC;
+				break;
+			default:
+			   varKind = KIND.NONE;
+	           System.out.println("KIND ERROR");
+	           System.exit(1);
+		}
 		advance();
-		if(keywords.contains(token))
-		{
-			writeKeyword(token);
-		}
-		else
-		{
-			writeIdentifier(token);
-		}
+		varType = token;
 		do
 		{
 			advance();
-			writeIdentifier(token);
+			table.define(token, varType, varKind);
 			advance();
-			if(token.equals(","))
-			{
-				writeSymbol(token);
-			}
+			
 		}while(token.equals(","));
 		
 		if(!token.equals(";"))
 		{
 			System.out.println("ERROR");
 		}
-		writeSymbol(token);
 		advance();
-		writer.write(classVarDecClose);
+		
 	}
 
 	private void compileClassName() throws IOException {
 		//write class name
-		writeIdentifier(token);
+		className = token;
+		table = new SymbolTable();
         advance();		
 	}
 
@@ -1273,7 +1318,7 @@ public class CompilationEngine {
 	public static void main(String[] args) throws IOException
 	{
 		//Change Path
-		CompilationEngine comp = new CompilationEngine("C:\\Users\\vigon_000\\Documents\\csci410\\Compiler");
+		CompilationEngine comp = new CompilationEngine("C:\\Users\\Isaac\\Desktop\\Desktop\\School\\Mines\\Fall2014\\ComputingElements\\CSCI410\\Compiler\\");
 		
 	}
 }

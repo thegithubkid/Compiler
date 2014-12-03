@@ -27,7 +27,7 @@ public class VMWriter{
 	
 	//Writes a VM push command
 	public void writePush(String segment, int index) throws IOException{
-		outputFile.write("push"+segment+" "+index+"\n");
+		outputFile.write("push "+segment+" "+index+"\n");
 	}
 	
 	//Writes a VM pop command
@@ -71,7 +71,7 @@ public class VMWriter{
 	
 	//Writes a VM return command
 	public void writeReturn() throws IOException{
-		outputFile.write('\n');
+		outputFile.write("return\n");
 	}
 	
 	//Closes the output file
