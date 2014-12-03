@@ -14,9 +14,11 @@ public class SymbolTable {
 	private int subArgCount;
 	private int subVarCount;
 	
+	private SymbolRecord record;
 	
-	private int ifCount;
-	private int whileCount;
+	//not sure about these:
+	//private int ifCount;
+	//private int whileCount;
 	
 	//Creates a new empty symbol table.
 	public SymbolTable() {
@@ -26,8 +28,9 @@ public class SymbolTable {
 		subScope = new HashMap<SymbolRecord,Integer>();
 		subArgCount=0;
 		subVarCount=0;
-		ifCount=0;
-		whileCount=0;
+		//ifCount=0;
+		//whileCount=0;
+		record = new SymbolRecord("", "", KIND.NONE);
 	}
 	
 	//Starts a new subroutine scope(i.e resets the subroutine's symbol table)
@@ -77,42 +80,43 @@ public class SymbolTable {
 	
 	//Returns the kind of string of the named identifier in the current scope.
 	//If the identifier is unknown in the current scope, returns NONE.
-	//TODO
 	public KIND kindOf(String name){
+		KIND kindOf = KIND.NONE;
 		if(subContains(name)){
-			
+			kindOf = record.kind;
 		}else if(classContains(name)){
-			
+			kindOf = record.kind;
 		}else{
-			
+			kindOf = KIND.NONE;
 		}
-		return KIND.NONE;
+		return kindOf;
 	}
 	
 	//Returns the type of the named identifier in the current scope.
-	//TODO
 	public String typeOf(String name){
+		String typeOf;
 		if(subContains(name)){
-			
+			typeOf = record.type;
 		}else if(classContains(name)){
-			
+			typeOf = record.type;
 		}else{
-			
+			typeOf = "";
 		}
-		return "";
+		return typeOf;
 	}
 	
 	//Returns the index assigned to the named identifier.
-	//TODO
 	public int indexOf(String name){
 		//Check if identifier is in the scope of the subroutine first, then the class scope.
+		int indexOf = -1;
 		if(subContains(name)){
-			return 1;
+			indexOf = subScope.get(record);
 		}else if(classContains(name)){
-			return 0;
+			indexOf = classScope.get(record);
 		}else{
-			return -1;
+			indexOf = -1;
 		}
+		return indexOf;
 	}
 	
 	//Helper Functions:
@@ -122,6 +126,7 @@ public class SymbolTable {
 		for (SymbolRecord i : classScope.keySet()){
 			if (i.equalsName(name)){
 				flag=true;
+				record = i;
 				break;
 			}
 		}
@@ -133,6 +138,7 @@ public class SymbolTable {
 		for (SymbolRecord i : subScope.keySet()){
 			if (i.equalsName(name)){
 				flag=true;
+				record = i;
 				break;
 			}
 		}
